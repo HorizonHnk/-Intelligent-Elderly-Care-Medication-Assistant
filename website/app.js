@@ -113,7 +113,10 @@ async function connectToESP32() {
 
     const savedUrl = localStorage.getItem('esp32BaseUrl');
     if (savedUrl) {
-        esp32BaseUrl = savedUrl;
+        // Remove trailing slash to prevent double slashes
+        esp32BaseUrl = savedUrl.replace(/\/+$/, '');
+        // Update localStorage with cleaned URL
+        localStorage.setItem('esp32BaseUrl', esp32BaseUrl);
     }
 
     try {
@@ -1405,9 +1408,12 @@ function loadSettings() {
     }
 
     if (savedUrl) {
-        esp32BaseUrl = savedUrl;
+        // Remove trailing slash to prevent double slashes
+        esp32BaseUrl = savedUrl.replace(/\/+$/, '');
+        // Update localStorage with cleaned URL
+        localStorage.setItem('esp32BaseUrl', esp32BaseUrl);
         const urlInput = document.getElementById('esp32Url');
-        if (urlInput) urlInput.value = savedUrl;
+        if (urlInput) urlInput.value = esp32BaseUrl;
     }
 
     if (savedVolume) {
