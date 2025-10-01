@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.5, maximum-scale=3.0">
+    <title>Intelligent Elderly Care & Medication Assistant</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="description" content="AI-powered medication management system for elderly care">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🏥</span>
+                <span>MediCare Assistant</span>
+            </div>
+            <button class="hamburger-menu" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-menu" id="navMenu">
+                <button class="emergency-btn" onclick="handleEmergency()">🚨 SOS Emergency</button>
+                <button class="nav-btn" onclick="openModal('familyPortalModal')">👨‍👩‍👧‍👦 Family</button>
+                <button class="nav-btn" onclick="openModal('scanModal')">📷 Scan</button>
+                <button class="nav-btn" onclick="openModal('contactModal')">📧 Contact</button>
+                <button class="nav-btn" onclick="openModal('aboutModal')">ℹ️ About</button>
+                <button class="settings-btn" onclick="openModal('settingsModal')">⚙️ Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Notification -->
+    <div class="alert" id="alertBox">
+        <span id="alertIcon"></span>
+        <span id="alertText"></span>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-label">Today's Adherence</div>
+                <div class="stat-value" id="todayAdherence">0%</div>
+                <div class="stat-change">+5% from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Current Streak</div>
+                <div class="stat-value" id="currentStreak">0</div>
+                <div class="stat-change">days in a row</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Next Medication</div>
+                <div class="stat-value" id="nextMedTime">--:--</div>
+                <div class="stat-change" id="nextMedName">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Device Status</div>
+                <div class="stat-value" style="font-size: 18px;" id="deviceStatus">Offline</div>
+                <div class="stat-change" id="lastSeen">Never connected</div>
+            </div>
+        </div>
+
+        <!-- Project Introduction -->
+        <div class="intro-section" style="background: white; border: 2px solid var(--gray-200); border-radius: var(--radius); padding: clamp(16px, 3vw, 24px); margin-bottom: clamp(20px, 4vw, 24px);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <div style="font-size: clamp(32px, 6vw, 40px);">🏥</div>
+                <div>
+                    <h2 style="margin: 0; font-size: clamp(18px, 4vw, 22px); font-weight: 600; color: var(--gray-900);">MediCare Assistant</h2>
+                    <p style="margin: 4px 0 0 0; font-size: clamp(13px, 2.5vw, 14px); color: var(--gray-600);">AI-Powered Elderly Care & Medication Management</p>
+                </div>
+            </div>
+            <p style="margin: 0; font-size: clamp(13px, 2.5vw, 14px); line-height: 1.6; color: var(--gray-700);">
+                An intelligent healthcare system combining <strong>Google Gemini AI</strong> with <strong>ESP32 IoT hardware</strong> for comprehensive medication tracking, real-time health monitoring, and 24/7 assistance.
+            </p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('medications')">Medications</button>
+            <button class="tab-btn" onclick="switchTab('schedule')">Schedule</button>
+            <button class="tab-btn" onclick="switchTab('hardware')">🔧 Hardware</button>
+            <button class="tab-btn" onclick="switchTab('history')">History</button>
+            <button class="tab-btn" onclick="switchTab('appointments')">Appointments</button>
+            <button class="tab-btn" onclick="switchTab('journal')">Journal</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab-btn" onclick="switchTab('documents')">Documents</button>
+            <button class="tab-btn" onclick="switchTab('assistant')">AI Assistant</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="dashboard">
+            <div class="dashboard-grid">
+                <!-- Today's Medications -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Today's Medications</h2>
+                        <button class="card-action" onclick="openModal('addMedModal')">+ Add</button>
+                    </div>
+                    <div id="todayMedications">
+                        <!-- Medications will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Quick Actions</h2>
+                    </div>
+                    <div class="action-btn-group" style="flex-direction: column; margin-top: 0;">
+                        <button class="action-btn" onclick="identifyPill()">📷 Identify Pill</button>
+                        <button class="action-btn" onclick="openCamera('document')">📄 Scan Prescription</button>
+                        <button class="action-btn" onclick="openChatbotWithVoice()">🎤 Voice Assistant</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="action-btn" onclick="startPhoneCall()" style="flex: 1; background: #10b981;">📞 Call</button>
+                            <button class="action-btn" onclick="startVideoCall()" style="flex: 1; background: #3b82f6;">📹 Video</button>
+                        </div>
+                        <button class="action-btn-secondary" onclick="viewSchedule()" style="width: 100%;">📅 View Full Schedule</button>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                    </div>
+                    <div id="recentActivity">
+                        <p style="text-align: center; color: var(--gray-500); padding: 20px;">No recent activity</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medications Tab -->
+        <div class="tab-content" id="medications">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">All Medications</h2>
+                    <button class="card-action" onclick="openModal('addMedModal')">+ Add New</button>
+                </div>
+                <div id="allMedications">
+                    <!-- All medications will be listed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Tab -->
+        <div class="tab-content" id="schedule">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Weekly Schedule</h2>
+                    <button class="card-action" onclick="exportSchedule()">Export</button>
+                </div>
+                <div id="weeklySchedule">
+                    <!-- Schedule will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Hardware Status Tab -->
+        <div class="tab-content" id="hardware">
+            <div class="hardware-grid">
+                <!-- Hardware Status Overview Card -->
+                <div class="card hardware-status-card">
+                    <div class="card-header">
+                        <h2 class="card-title">🔧 Hardware Status</h2>
+                        <button class="card-action" onclick="refreshHardwareStatus()">🔄 Refresh</button>
+                    </div>
+                    <div class="hardware-status-grid">
+                        <div class="hardware-component">
+                            <div class="component-icon">📟</div>
+                            <div class="component-info">
+                                <div class="component-name">ESP32 DevKit V1</div>
+                                <div class="component-status" id="esp32Status">
+                                    <span class="status-dot status-connected"></span>
+                                    <span id="esp32StatusText">Connected</span>
+                                </div>
+                                <div class="component-detail">WiFi: <span id="wifiStrength">-45 dBm</span></div>
+                            </div>
+                        </div>
+
+                        <div class="hardware-component">
+                            <div class="component-icon">💻</div>
+                            <div class="component-info">
+                                <div class="component-name">20x4 LCD I2C Display</div>
+                                <div class="component-status" id="lcdStatus">
+                                    <span class="status-dot status-connected"></span>
+                                    <span id="lcdStatusText">Active</span>
+                                </div>
+                                <div class="component-detail">Address: <span id="lcdAddress">0x27</span></div>
+                            </div>
+                        </div>
+
+                        <div class="hardware-component">
+                            <div class="component-icon">💡</div>
+                            <div class="component-info">
+                                <div class="component-name">LED Indicators</div>
+                                <div class="component-status">
+                                    <span class="led-indicator led-red" id="ledRed" title="Red LED"></span>
+                                    <span class="led-indicator led-green" id="ledGreen" title="Green LED"></span>
+                                    <span class="led-indicator led-blue" id="ledBlue" title="Blue LED"></span>
+                                </div>
+                                <div class="component-detail">GPIO: 25, 26, 27</div>
+                            </div>
+                        </div>
+
+                        <div class="hardware-component">
+                            <div class="component-icon">🔊</div>
+                            <div class="component-info">
+                                <div class="component-name">Active Buzzer</div>
+                                <div class="component-status" id="buzzerStatus">
+                                    <span class="status-dot status-connected"></span>
+                                    <span id="buzzerStatusText">Ready</span>
+                                </div>
+                                <div class="component-detail">GPIO 14 | Volume: <span id="buzzerVolume">80%</span></div>
+                            </div>
+                        </div>
+
+                        <div class="hardware-component">
+                            <div class="component-icon">🎛️</div>
+                            <div class="component-info">
+                                <div class="component-name">Control Buttons</div>
+                                <div class="component-status">
+                                    <span class="status-dot status-connected"></span>
+                                    <span>4/4 Active</span>
+                                </div>
+                                <div class="component-detail">GPIO: 32, 33, 35, 34</div>
+                            </div>
+                        </div>
+
+                        <div class="hardware-component">
+                            <div class="component-icon">🎚️</div>
+                            <div class="component-info">
+                                <div class="component-name">Potentiometer</div>
+                                <div class="component-status" id="potStatus">
+                                    <span class="status-dot status-connected"></span>
+                                    <span id="potStatusText">Active</span>
+                                </div>
+                                <div class="component-detail">GPIO 36 | Value: <span id="potValue">2048</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Component Testing Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🧪 Component Testing</h2>
+                        <button class="card-action" onclick="openModal('hardwareTestModal')">Open Test Panel</button>
+                    </div>
+                    <div class="test-quick-actions">
+                        <button class="test-btn" onclick="testAllLEDs()">
+                            <span class="test-icon">💡</span>
+                            <span class="test-label">Test LEDs</span>
+                        </button>
+                        <button class="test-btn" onclick="testBuzzer()">
+                            <span class="test-icon">🔊</span>
+                            <span class="test-label">Test Buzzer</span>
+                        </button>
+                        <button class="test-btn" onclick="testLCD()">
+                            <span class="test-icon">💻</span>
+                            <span class="test-label">Test LCD</span>
+                        </button>
+                        <button class="test-btn" onclick="testButtons()">
+                            <span class="test-icon">🎛️</span>
+                            <span class="test-label">Test Buttons</span>
+                        </button>
+                        <button class="test-btn" onclick="scanI2C()">
+                            <span class="test-icon">🔍</span>
+                            <span class="test-label">I2C Scanner</span>
+                        </button>
+                        <button class="test-btn" onclick="testAllComponents()">
+                            <span class="test-icon">✅</span>
+                            <span class="test-label">Test All</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hardware Diagram Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📐 System Architecture</h2>
+                        <button class="card-action" onclick="toggleDiagramView()">Toggle View</button>
+                    </div>
+                    <div class="hardware-diagram" id="hardwareDiagram">
+                        <div class="diagram-container">
+                            <div class="diagram-text">
+                                <h3 style="text-align: center; color: var(--primary); margin-bottom: 20px;">Intelligent Elderly Care & Medication Assistant</h3>
+                                <div class="diagram-components">
+                                    <div class="diagram-section">
+                                        <h4>🌐 Cloud Services</h4>
+                                        <ul>
+                                            <li>Google Gemini AI API</li>
+                                            <li>Medication Schedule Management</li>
+                                            <li>Web Interface (Camera, Microphone)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="diagram-section">
+                                        <h4>🎛️ Main Controller</h4>
+                                        <ul>
+                                            <li>ESP32 DevKit V1 (Dual-core 240MHz)</li>
+                                            <li>WiFi 802.11 b/g/n</li>
+                                            <li>Bluetooth v4.2</li>
+                                            <li>30 GPIO pins, 4MB Flash</li>
+                                        </ul>
+                                    </div>
+                                    <div class="diagram-section">
+                                        <h4>📟 Display & Indicators</h4>
+                                        <ul>
+                                            <li>20x4 LCD I2C Display (I2C: 0x27)</li>
+                                            <li>Red LED (GPIO 25) - Alert</li>
+                                            <li>Green LED (GPIO 26) - Confirmed</li>
+                                            <li>Blue LED (GPIO 27) - Status</li>
+                                        </ul>
+                                    </div>
+                                    <div class="diagram-section">
+                                        <h4>🔊 Audio & Input</h4>
+                                        <ul>
+                                            <li>Active Buzzer 5V (GPIO 14)</li>
+                                            <li>4× Tactile Buttons (GPIO 32-35)</li>
+                                            <li>10kΩ Potentiometer (GPIO 36)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="diagram-section">
+                                        <h4>🔌 Power & Communication</h4>
+                                        <ul>
+                                            <li>USB Micro (5V 2A)</li>
+                                            <li>HTTP/HTTPS via WiFi</li>
+                                            <li>I2C Protocol (SDA: GPIO 21, SCL: GPIO 22)</li>
+                                            <li>PWM for LED/Buzzer control</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Component Health Monitor -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📊 Component Health</h2>
+                        <span class="health-score" id="healthScore">95%</span>
+                    </div>
+                    <div class="health-monitor">
+                        <div class="health-item">
+                            <div class="health-label">
+                                <span>ESP32 Uptime</span>
+                                <span class="health-value" id="esp32Uptime">2d 14h 23m</span>
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-progress" style="width: 100%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label">
+                                <span>LCD Brightness</span>
+                                <span class="health-value" id="lcdBrightness">85%</span>
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-progress" style="width: 85%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label">
+                                <span>LED Performance</span>
+                                <span class="health-value" id="ledPerformance">100%</span>
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-progress" style="width: 100%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label">
+                                <span>Button Response</span>
+                                <span class="health-value" id="buttonResponse">98%</span>
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-progress" style="width: 98%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label">
+                                <span>Buzzer Output</span>
+                                <span class="health-value" id="buzzerOutput">92%</span>
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-progress" style="width: 92%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                        <div class="health-item">
+                            <div class="health-label">
+                                <span>WiFi Signal</span>
+                                <span class="health-value" id="wifiSignal">Excellent</span>
+                            </div>
+                            <div class="health-bar">
+                                <div class="health-progress" style="width: 90%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div class="tab-content" id="analytics">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Adherence Analytics</h2>
+                    <button class="card-action" onclick="downloadReport()">Download Report</button>
+                </div>
+                <canvas id="adherenceChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div class="tab-content" id="documents">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Scanned Documents</h2>
+                    <button class="card-action" onclick="openModal('scanModal')">+ Scan New</button>
+                </div>
+                <div id="documentsList">
+                    <p style="text-align: center; color: var(--gray-500); padding: 40px;">No documents scanned yet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Tab -->
+        <div class="tab-content" id="assistant">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">AI Health Assistant</h2>
+                </div>
+                <div id="chatMessages" style="min-height: 300px; max-height: 400px; overflow-y: auto; margin-bottom: 16px; padding: 16px; background: var(--gray-50); border: 1px solid var(--gray-300); border-radius: var(--radius);">
+                    <div style="padding: 16px; background: #ffffff; border: 1px solid var(--gray-300); border-radius: var(--radius); margin-bottom: 12px;">
+                        <strong>AI Assistant:</strong> Hello! I'm your AI health assistant. How can I help you today?
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="chatInput" class="form-input" placeholder="Ask me anything..." onkeypress="handleChatKeyPress(event)" style="flex: 1;">
+                    <button class="action-btn" onclick="sendChatMessage()" style="flex: none;">Send</button>
+                    <button class="action-btn-secondary" onclick="startVoiceAssistant()" style="flex: none;">Voice</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medication History Tab -->
+        <div class="tab-content" id="history">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Medication History</h2>
+                    <button class="card-action" onclick="exportHistory()">📥 Export</button>
+                </div>
+                <div style="margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="historyFilter" class="form-select" style="flex: 1; min-width: 150px;" onchange="updateMedicationHistory()">
+                        <option value="all">All Medications</option>
+                        <option value="taken">Taken Only</option>
+                        <option value="missed">Missed Only</option>
+                    </select>
+                    <input type="date" id="historyDate" class="form-input" style="flex: 1; min-width: 150px;" onchange="updateMedicationHistory()">
+                </div>
+                <div id="medicationHistory">
+                    <!-- History will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointments Tab -->
+        <div class="tab-content" id="appointments">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Doctor Appointments</h2>
+                    <button class="card-action" onclick="openModal('addAppointmentModal')">+ Add</button>
+                </div>
+                <div id="appointmentsList">
+                    <!-- Appointments will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Journal Tab -->
+        <div class="tab-content" id="journal">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Health Journal</h2>
+                    <button class="card-action" onclick="openModal('addJournalModal')">+ New Entry</button>
+                </div>
+                <div id="journalEntries">
+                    <!-- Journal entries will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Medication Modal -->
+    <div class="modal" id="addMedModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Medication</h3>
+                <button class="close-modal" onclick="closeModal('addMedModal')">&times;</button>
+            </div>
+            <form onsubmit="window.editingMedicationId ? updateMedication(event) : addMedication(event); return false;">
+                <div class="form-group">
+                    <label class="form-label">Medication Name</label>
+                    <input type="text" class="form-input" id="medName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dosage</label>
+                    <input type="text" class="form-input" id="medDosage" placeholder="e.g., 1 tablet" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Time</label>
+                    <input type="time" class="form-input" id="medTime" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Frequency</label>
+                    <select class="form-select" id="medFrequency">
+                        <option value="daily">Daily</option>
+                        <option value="twice">Twice daily</option>
+                        <option value="thrice">Three times daily</option>
+                        <option value="weekly">Weekly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pill Image (Optional)</label>
+                    <input type="file" class="form-input" id="medImage" accept="image/*" onchange="previewMedImage(this)">
+                    <div id="medImagePreview" style="margin-top: 10px; text-align: center;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Current Stock (Pills)</label>
+                    <input type="number" class="form-input" id="medStock" min="0" placeholder="e.g., 30">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Refill Alert When Below</label>
+                    <input type="number" class="form-input" id="medRefillAlert" min="0" placeholder="e.g., 7">
+                </div>
+                <div class="action-btn-group">
+                    <button type="submit" class="action-btn">Add Medication</button>
+                    <button type="button" class="action-btn-secondary" onclick="closeModal('addMedModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scan Document Modal -->
+    <div class="modal" id="scanModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Scan Document</h3>
+                <button class="close-modal" onclick="closeModal('scanModal')">&times;</button>
+            </div>
+            <div class="video-container">
+                <video id="scanVideo" class="video-preview" autoplay playsinline></video>
+                <canvas id="scanCanvas" style="display: none;"></canvas>
+            </div>
+            <div class="video-controls">
+                <button class="action-btn" onclick="captureDocument()">Capture</button>
+                <button class="action-btn-secondary" onclick="switchCamera()">Switch Camera</button>
+                <button class="action-btn-secondary" onclick="closeScanner()">Close</button>
+            </div>
+            <div class="loading" id="scanLoading">
+                <div class="spinner"></div>
+                <div class="loading-text">Analyzing document...</div>
+            </div>
+            <div id="scanResult" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Settings</h3>
+                <button class="close-modal" onclick="closeModal('settingsModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Google Gemini API Key</label>
+                <input type="password" class="form-input" id="apiKey" placeholder="Enter your API key">
+                <small style="color: var(--gray-500); font-size: 12px;">Get your key from <a href="https://aistudio.google.com/" target="_blank" style="color: var(--primary);">Google AI Studio</a></small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Patient Name</label>
+                <input type="text" class="form-input" id="patientName">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Emergency Contact</label>
+                <input type="tel" class="form-input" id="emergencyContact" placeholder="+27 XX XXX XXXX">
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="esp32Enable" style="width: auto; cursor: pointer;">
+                    <span class="form-label" style="margin: 0;">Connect to ESP32 Device</span>
+                </label>
+                <small style="color: var(--gray-500); font-size: 12px;">Enable this only if you have an ESP32 hardware device</small>
+            </div>
+            <div class="form-group" id="esp32UrlGroup" style="display: none;">
+                <label class="form-label">ESP32 Device URL</label>
+                <input type="text" class="form-input" id="esp32Url" placeholder="http://192.168.1.100">
+                <small style="color: var(--gray-500); font-size: 12px;">Find the IP address on your device's LCD screen</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reminder Volume: <span id="volumeDisplay">80%</span></label>
+                <input type="range" class="form-input" id="reminderVolume" min="0" max="100" value="80" oninput="updateVolumeDisplay(this.value)">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Language</label>
+                <select class="form-select" id="appLanguage" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="es">Español (Spanish)</option>
+                    <option value="fr">Français (French)</option>
+                    <option value="de">Deutsch (German)</option>
+                    <option value="pt">Português (Portuguese)</option>
+                    <option value="zh">中文 (Chinese)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()" style="width: auto; cursor: pointer;">
+                    <span class="form-label" style="margin: 0;">🌙 Dark Mode</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notification Sound</label>
+                <select class="form-select" id="notificationSound">
+                    <option value="beep">Beep (Default)</option>
+                    <option value="chime">Chime</option>
+                    <option value="bell">Bell</option>
+                    <option value="gentle">Gentle Alert</option>
+                </select>
+            </div>
+            <div class="action-btn-group">
+                <button class="action-btn" onclick="saveSettings()">Save Settings</button>
+                <button class="action-btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact/Feedback Modal -->
+    <div class="modal" id="contactModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Contact & Feedback</h3>
+                <button class="close-modal" onclick="closeModal('contactModal')">&times;</button>
+            </div>
+            <form id="contactForm" action="https://formspree.io/f/xrbygvga" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Your Name</label>
+                    <input type="text" class="form-input" name="name" id="contactName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" name="email" id="contactEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <select class="form-select" name="subject" id="contactSubject" required>
+                        <option value="">Select a subject...</option>
+                        <option value="feedback">General Feedback</option>
+                        <option value="bug">Report a Bug</option>
+                        <option value="feature">Feature Request</option>
+                        <option value="help">Need Help</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-textarea" name="message" id="contactMessage" required rows="5" placeholder="Tell us what's on your mind..."></textarea>
+                </div>
+                <input type="hidden" name="_subject" value="MediCare Assistant - New Contact Form Submission">
+                <input type="hidden" name="_next" value="#contact-success">
+                <input type="hidden" name="timestamp" id="contactTimestamp">
+                <div class="action-btn-group">
+                    <button type="submit" class="action-btn" id="submitContactBtn">Send Message</button>
+                    <button type="button" class="action-btn-secondary" onclick="closeModal('contactModal')">Cancel</button>
+                </div>
+            </form>
+            <div id="contactSuccess" style="display: none; text-align: center; padding: 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+                <h3 style="color: var(--success); margin-bottom: 12px;">Message Sent!</h3>
+                <p style="color: var(--gray-600);">Thank you for your feedback. We'll get back to you soon.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Appointment Modal -->
+    <div class="modal" id="addAppointmentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Appointment</h3>
+                <button class="close-modal" onclick="closeModal('addAppointmentModal')">&times;</button>
+            </div>
+            <form onsubmit="addAppointment(event); return false;">
+                <div class="form-group">
+                    <label class="form-label">Doctor/Clinic Name</label>
+                    <input type="text" class="form-input" id="appointmentDoctor" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Appointment Type</label>
+                    <select class="form-select" id="appointmentType">
+                        <option value="checkup">Regular Check-up</option>
+                        <option value="followup">Follow-up</option>
+                        <option value="specialist">Specialist</option>
+                        <option value="lab">Lab Test</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date & Time</label>
+                    <input type="datetime-local" class="form-input" id="appointmentDateTime" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-input" id="appointmentLocation" placeholder="Hospital/Clinic address">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-textarea" id="appointmentNotes" rows="3" placeholder="Reason for visit, preparation instructions, etc."></textarea>
+                </div>
+                <div class="action-btn-group">
+                    <button type="submit" class="action-btn">Add Appointment</button>
+                    <button type="button" class="action-btn-secondary" onclick="closeModal('addAppointmentModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Journal Entry Modal -->
+    <div class="modal" id="addJournalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">New Health Journal Entry</h3>
+                <button class="close-modal" onclick="closeModal('addJournalModal')">&times;</button>
+            </div>
+            <form onsubmit="addJournalEntry(event); return false;">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="journalDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mood</label>
+                    <select class="form-select" id="journalMood">
+                        <option value="great">😊 Great</option>
+                        <option value="good">🙂 Good</option>
+                        <option value="okay">😐 Okay</option>
+                        <option value="bad">😞 Not Good</option>
+                        <option value="terrible">😢 Terrible</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Symptoms (if any)</label>
+                    <input type="text" class="form-input" id="journalSymptoms" placeholder="e.g., Headache, Fatigue">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-textarea" id="journalNotes" rows="5" placeholder="How are you feeling? Any side effects? What happened today?" required></textarea>
+                </div>
+                <div class="action-btn-group">
+                    <button type="submit" class="action-btn">Save Entry</button>
+                    <button type="button" class="action-btn-secondary" onclick="closeModal('addJournalModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hardware Test Modal -->
+    <div class="modal" id="hardwareTestModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🧪 Hardware Component Testing</h3>
+                <button class="close-modal" onclick="closeModal('hardwareTestModal')">&times;</button>
+            </div>
+            <div class="hardware-test-panel">
+                <div class="test-section">
+                    <h4>💡 LED Testing</h4>
+                    <div class="test-controls">
+                        <button class="test-control-btn" onclick="toggleLED('red')">🔴 Red LED</button>
+                        <button class="test-control-btn" onclick="toggleLED('green')">🟢 Green LED</button>
+                        <button class="test-control-btn" onclick="toggleLED('blue')">🔵 Blue LED</button>
+                        <button class="test-control-btn" onclick="cycleAllLEDs()">🔄 Cycle All</button>
+                    </div>
+                </div>
+                <div class="test-section">
+                    <h4>🔊 Buzzer Testing</h4>
+                    <div class="test-controls">
+                        <button class="test-control-btn" onclick="playTone('short')">Short Beep</button>
+                        <button class="test-control-btn" onclick="playTone('long')">Long Beep</button>
+                        <button class="test-control-btn" onclick="playTone('pattern')">Pattern</button>
+                        <button class="test-control-btn" onclick="stopBuzzer()">⏹️ Stop</button>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label class="form-label">Test Volume: <span id="testVolume">80%</span></label>
+                        <input type="range" class="form-input" min="0" max="100" value="80" oninput="updateTestVolume(this.value)">
+                    </div>
+                </div>
+                <div class="test-section">
+                    <h4>💻 LCD Display Testing</h4>
+                    <div class="test-controls">
+                        <button class="test-control-btn" onclick="displayTestPattern()">Test Pattern</button>
+                        <button class="test-control-btn" onclick="displayCustomText()">Custom Text</button>
+                        <button class="test-control-btn" onclick="clearLCD()">Clear Display</button>
+                        <button class="test-control-btn" onclick="adjustLCDBacklight()">💡 Backlight</button>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <input type="text" class="form-input" id="lcdCustomText" placeholder="Enter custom text (max 80 chars)" maxlength="80">
+                    </div>
+                </div>
+                <div class="test-section">
+                    <h4>🎛️ Button Testing</h4>
+                    <div class="button-test-grid">
+                        <div class="button-test-item">
+                            <span>Button 1 (GPIO 32)</span>
+                            <span class="button-status" id="btn1Status">⚪ Waiting...</span>
+                        </div>
+                        <div class="button-test-item">
+                            <span>Button 2 (GPIO 33)</span>
+                            <span class="button-status" id="btn2Status">⚪ Waiting...</span>
+                        </div>
+                        <div class="button-test-item">
+                            <span>Button 3 (GPIO 35)</span>
+                            <span class="button-status" id="btn3Status">⚪ Waiting...</span>
+                        </div>
+                        <div class="button-test-item">
+                            <span>Button 4 (GPIO 34)</span>
+                            <span class="button-status" id="btn4Status">⚪ Waiting...</span>
+                        </div>
+                    </div>
+                    <button class="test-control-btn" onclick="startButtonTest()" style="width: 100%; margin-top: 12px;">Start Button Test</button>
+                </div>
+                <div class="test-section">
+                    <h4>🔍 I2C Scanner</h4>
+                    <button class="test-control-btn" onclick="runI2CScan()" style="width: 100%;">Scan I2C Bus</button>
+                    <div id="i2cResults" style="margin-top: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm); font-family: monospace; font-size: 12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Family Portal Modal -->
+    <div class="modal" id="familyPortalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Family Portal</h3>
+                <button class="close-modal" onclick="closeModal('familyPortalModal')">&times;</button>
+            </div>
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">👨‍👩‍👧‍👦</div>
+                <p style="color: var(--gray-600);">Share your medication status with family members</p>
+            </div>
+            <div id="familyShareLink" style="margin-bottom: 20px;">
+                <!-- Share link will be generated here -->
+            </div>
+            <div class="form-group">
+                <label class="form-label">Generate Share Link</label>
+                <button class="action-btn" onclick="generateFamilyLink()" style="width: 100%;">🔗 Generate Shareable Link</button>
+            </div>
+            <div id="currentFamilyMembers" style="margin-top: 20px;">
+                <h4 style="color: var(--primary); margin-bottom: 12px;">Connected Family Members</h4>
+                <!-- Family members list will be rendered here -->
+                <p style="text-align: center; color: var(--gray-500); padding: 20px;">No family members connected yet</p>
+            </div>
+            <div class="action-btn-group" style="margin-top: 24px;">
+                <button class="action-btn-secondary" onclick="closeModal('familyPortalModal')" style="width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">About MediCare Assistant</h3>
+                <button class="close-modal" onclick="closeModal('aboutModal')">&times;</button>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 64px; margin-bottom: 16px;">🏥</div>
+                <h2 style="color: var(--primary); margin-bottom: 8px;">MediCare Assistant</h2>
+                <p style="color: var(--gray-600); font-size: 14px;">Version 2.0.0 - Hardware Integration Edition</p>
+            </div>
+
+            <div style="background: var(--gray-50); padding: 20px; border-radius: var(--radius); margin-bottom: 20px;">
+                <h3 style="color: var(--primary); margin-bottom: 12px; font-size: 18px;">🎯 Our Mission</h3>
+                <p style="color: var(--gray-700); line-height: 1.6; margin-bottom: 0;">
+                    MediCare Assistant is an intelligent elderly care and medication management system designed to help seniors
+                    maintain medication adherence, stay connected with healthcare providers, and manage their health independently
+                    with the power of AI.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: var(--primary); margin-bottom: 16px; font-size: 18px;">✨ Key Features</h3>
+                <div style="display: grid; gap: 12px;">
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">💊</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Smart Medication Tracking</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Schedule, track, and get reminders for all your medications</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🤖</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">AI Health Assistant</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">24/7 AI chatbot powered by Google Gemini for health questions</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">📞</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">AI Voice & Video Calls</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Connect with AI assistant via phone or video call with real-time transcription</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">📷</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Document & Pill Scanner</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Scan prescriptions and identify pills using AI image recognition</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🎤</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Voice Recognition</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Hands-free interaction with voice commands and responses</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">📊</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Adherence Analytics</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Track medication adherence patterns and maintain streaks</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🚨</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Emergency SOS</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Quick access to emergency contacts and services</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🔌</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">ESP32 Hardware Integration</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Connect to ESP32 DevKit V1 with 20x4 LCD, LEDs, buzzer, and buttons for enhanced physical automation</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🔧</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Hardware Testing Suite</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Real-time monitoring and testing of all hardware components with I2C scanner</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">📦</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Refill Reminders & Stock Tracking</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Track medication stock levels and receive alerts when refills are needed</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">👨‍👩‍👧‍👦</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Family Portal</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Share medication history and adherence data with family members</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🗓️</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Appointments & Health Journal</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Schedule appointments and maintain a daily health journal</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🌍</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Multi-Language Support</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Available in English, Spanish, French, German, Portuguese, and Chinese</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: start; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-sm);">
+                        <span style="font-size: 24px;">🌙</span>
+                        <div>
+                            <strong style="color: var(--gray-900);">Dark Mode & Customization</strong>
+                            <p style="color: var(--gray-600); font-size: 13px; margin: 4px 0 0 0;">Switch between light and dark themes with customizable notification sounds</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: var(--primary); margin-bottom: 16px; font-size: 18px;">🛠️ Technologies Used</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <span style="background: var(--primary); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">Google Gemini AI</span>
+                    <span style="background: #e74c3c; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">ESP32 DevKit V1</span>
+                    <span style="background: #3498db; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">I2C Protocol</span>
+                    <span style="background: var(--success); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">Web Speech API</span>
+                    <span style="background: var(--warning); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">MediaDevices API</span>
+                    <span style="background: var(--danger); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">WebRTC</span>
+                    <span style="background: #9b59b6; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">Web Audio API</span>
+                    <span style="background: #16a085; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">PWM Control</span>
+                    <span style="background: var(--gray-600); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">Local Storage</span>
+                    <span style="background: var(--primary); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">Responsive Design</span>
+                    <span style="background: #e67e22; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">WiFi Integration</span>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: var(--primary); margin-bottom: 16px; font-size: 18px;">⚙️ Hardware Specifications (Optional)</h3>
+                <div style="background: var(--gray-50); padding: 16px; border-radius: var(--radius); border-left: 4px solid var(--primary);">
+                    <div style="display: grid; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 6px;">
+                            <span style="color: var(--gray-700); font-size: 13px;"><strong>Main Controller:</strong></span>
+                            <span style="color: var(--gray-600); font-size: 13px;">ESP32 DevKit V1 (240MHz Dual-Core)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 6px;">
+                            <span style="color: var(--gray-700); font-size: 13px;"><strong>Display:</strong></span>
+                            <span style="color: var(--gray-600); font-size: 13px;">20x4 LCD I2C (Address: 0x27)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 6px;">
+                            <span style="color: var(--gray-700); font-size: 13px;"><strong>Indicators:</strong></span>
+                            <span style="color: var(--gray-600); font-size: 13px;">3× RGB LEDs (GPIO 25, 26, 27)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 6px;">
+                            <span style="color: var(--gray-700); font-size: 13px;"><strong>Audio:</strong></span>
+                            <span style="color: var(--gray-600); font-size: 13px;">Active Buzzer 5V (GPIO 14)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 6px;">
+                            <span style="color: var(--gray-700); font-size: 13px;"><strong>Inputs:</strong></span>
+                            <span style="color: var(--gray-600); font-size: 13px;">4× Buttons + Potentiometer</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 6px;">
+                            <span style="color: var(--gray-700); font-size: 13px;"><strong>Connectivity:</strong></span>
+                            <span style="color: var(--gray-600); font-size: 13px;">WiFi 802.11 b/g/n + Bluetooth 4.2</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: linear-gradient(135deg, var(--primary) 0%, #667eea 100%); padding: 20px; border-radius: var(--radius); margin-bottom: 20px; color: white; text-align: center;">
+                <h3 style="margin: 0 0 8px 0; font-size: 18px;">💡 Privacy & Security</h3>
+                <p style="margin: 0; font-size: 13px; opacity: 0.95; line-height: 1.5;">
+                    All your data is stored locally on your device. Your API key and health information never leave your browser.
+                    We respect your privacy and security.
+                </p>
+            </div>
+
+            <div style="text-align: center; padding: 16px; background: var(--gray-50); border-radius: var(--radius);">
+                <p style="color: var(--gray-600); font-size: 13px; margin: 0 0 8px 0;">
+                    <strong>Developed with ❤️ for elderly care</strong>
+                </p>
+                <p style="color: var(--gray-500); font-size: 12px; margin: 0;">
+                    &copy; 2025 MediCare Assistant. All rights reserved.
+                </p>
+            </div>
+
+            <div class="action-btn-group" style="margin-top: 24px;">
+                <button class="action-btn" onclick="openModal('contactModal'); closeModal('aboutModal');" style="width: 100%;">
+                    📧 Contact Us
+                </button>
+                <button class="action-btn-secondary" onclick="closeModal('aboutModal')" style="width: 100%;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- AI Video Call Interface -->
+    <div class="video-call-interface" id="videoCallInterface">
+        <div class="video-call-header">
+            <div class="video-status" id="videoCallStatus">Connecting to AI Health Assistant...</div>
+            <div class="video-duration" id="videoCallDuration">00:00</div>
+        </div>
+        <div class="video-call-content">
+            <div class="video-main">
+                <video id="userVideo" class="user-video" autoplay muted playsinline></video>
+                <canvas id="videoCaptureCanvas" style="display: none;"></canvas>
+                <div class="video-analysis-indicator" id="videoAnalysisIndicator">
+                    <div class="analysis-pulse"></div>AI Analyzing...
+                </div>
+            </div>
+            <div class="video-sidebar">
+                <div class="ai-video-avatar" id="videoCallAvatar">🏥</div>
+                <div class="video-controls">
+                    <button class="video-control-btn" id="videoMuteBtn" onclick="toggleVideoMute()" title="Mute/Unmute">🎤</button>
+                    <button class="video-control-btn" id="videoCameraBtn" onclick="toggleVideoCamera()" title="Camera On/Off">📹</button>
+                    <button class="video-control-btn" onclick="captureAndAnalyzeVideo()" title="Capture & Analyze">📸</button>
+                    <button class="video-control-btn" onclick="copyVideoTranscript()" title="Copy Transcript">📋</button>
+                    <button class="video-control-btn video-end-btn" onclick="endVideoCall()" title="End Call">📞</button>
+                </div>
+                <div class="video-transcript" id="videoTranscript">
+                    <div class="transcript-entry transcript-ai">
+                        <strong>AI Health Assistant:</strong> Hi! I can see you. How can I help you today?
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Phone Call Interface -->
+    <div class="call-interface" id="callInterface">
+        <div class="call-content">
+            <div class="call-avatar" id="callAvatar">🏥</div>
+            <div class="call-status" id="callStatus">Connecting to AI Health Assistant...</div>
+            <div class="call-duration" id="callDuration">00:00</div>
+            <div class="call-controls">
+                <button class="call-control-btn" id="callMuteBtn" onclick="toggleCallMute()" title="Mute/Unmute">🎤</button>
+                <button class="call-control-btn" onclick="copyCallTranscript()" title="Copy Transcript">📋</button>
+                <button class="call-control-btn end-call-btn" onclick="endCall()" title="End Call">📞</button>
+            </div>
+            <div class="call-transcript" id="callTranscript">
+                <div class="transcript-entry transcript-ai">
+                    <strong>AI Health Assistant:</strong> Hi! I'm here to help with your health questions. What can I assist you with?
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listening/Speaking Indicators -->
+    <div class="listening-indicator" id="listeningIndicator">
+        <div class="listening-pulse"></div>
+        Listening...
+    </div>
+
+    <div class="speaking-indicator" id="speakingIndicator">
+        <div class="speaking-bars">
+            <div class="speaking-bar"></div>
+            <div class="speaking-bar"></div>
+            <div class="speaking-bar"></div>
+            <div class="speaking-bar"></div>
+        </div>
+        AI Speaking...
+    </div>
+
+    <!-- Floating Chatbot Button -->
+    <div class="chatbot-float" onclick="openChatbot()" title="Chat with AI Assistant">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.31-3.86-.86l-.28-.14-2.86.49.49-2.86-.14-.28C4.31 14.68 4 13.38 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
+            <circle cx="9" cy="12" r="1"/>
+            <circle cx="12" cy="12" r="1"/>
+            <circle cx="15" cy="12" r="1"/>
+        </svg>
+    </div>
+
+    <!-- Chatbot Modal -->
+    <div class="modal chatbot-modal" id="chatbotModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🤖 AI Health Assistant</h3>
+                <button class="close-modal" onclick="closeChatbot()">&times;</button>
+            </div>
+            <div class="chatbot-messages" id="chatbotMessages">
+                <div style="padding: 12px; background: #ffffff; border: 1px solid var(--gray-300); border-radius: var(--radius); margin-bottom: 12px;">
+                    <strong>AI Assistant:</strong> Hello! I'm your AI health assistant. I can help you with medication questions, health advice, and more. How can I assist you today?
+                </div>
+            </div>
+            <div class="chatbot-input-area">
+                <input type="text" id="chatbotInput" class="form-input" placeholder="Type your message..." onkeypress="handleChatbotKeyPress(event)" style="flex: 1;">
+                <button class="action-btn-secondary" onclick="startChatbotVoice()" style="flex: none; padding: 12px 16px;" title="Voice Input">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                </button>
+                <button class="action-btn" onclick="sendChatbotMessage()" style="flex: none;">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3 class="footer-title">🏥 MediCare Assistant</h3>
+                <p class="footer-text">Your intelligent companion for medication management and elderly care.</p>
+                <div class="footer-social">
+                    <a href="#" class="social-link" title="Facebook">📘</a>
+                    <a href="#" class="social-link" title="Twitter">🐦</a>
+                    <a href="#" class="social-link" title="Instagram">📷</a>
+                    <a href="#" class="social-link" title="LinkedIn">💼</a>
+                </div>
+            </div>
+
+            <div class="footer-section">
+                <h4 class="footer-subtitle">Quick Links</h4>
+                <ul class="footer-links">
+                    <li><a href="#" onclick="switchTab('dashboard'); return false;">Dashboard</a></li>
+                    <li><a href="#" onclick="switchTab('medications'); return false;">Medications</a></li>
+                    <li><a href="#" onclick="switchTab('appointments'); return false;">Appointments</a></li>
+                    <li><a href="#" onclick="switchTab('journal'); return false;">Health Journal</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h4 class="footer-subtitle">Resources</h4>
+                <ul class="footer-links">
+                    <li><a href="#" onclick="openModal('aboutModal'); return false;">About Us</a></li>
+                    <li><a href="#" onclick="openModal('contactModal'); return false;">Contact Support</a></li>
+                    <li><a href="#" onclick="openModal('familyPortalModal'); return false;">Family Portal</a></li>
+                    <li><a href="#" onclick="handleEmergency(); return false;">Emergency Help</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h4 class="footer-subtitle">Contact Info</h4>
+                <ul class="footer-contact">
+                    <li>📞 Emergency: 10177</li>
+                    <li>📧 support@medicare.com</li>
+                    <li>🏥 24/7 AI Assistant</li>
+                    <li>🌍 Global Service</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2025 MediCare Assistant. All rights reserved.</p>
+            <p>Developed with ❤️ for elderly care | <a href="#" onclick="openModal('aboutModal'); return false;">Privacy Policy</a> | <a href="#" onclick="openModal('contactModal'); return false;">Terms of Service</a></p>
+        </div>
+    </footer>
+    <script src="app.js"></script>
+</body>
+</html>
