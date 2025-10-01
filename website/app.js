@@ -143,10 +143,21 @@ async function connectToESP32() {
         document.getElementById('deviceStatus').textContent = 'Offline';
         document.getElementById('deviceStatus').style.color = 'var(--danger)';
 
-        // Only log first attempt to avoid spam
-        if (reconnectAttempts === 0) {
-            console.log('💡 ESP32 device not found - running in standalone mode');
-            console.log('To connect: Set ESP32 URL in Settings and click "Connect Device"');
+        // Check for Mixed Content error
+        if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            if (reconnectAttempts === 0) {
+                console.log('⚠️ Connection blocked - Mixed Content Error');
+                console.log('🔧 FIX: Click the shield icon (🛡️) in address bar');
+                console.log('    → Then click "Load unsafe scripts" or "Allow"');
+                console.log('    → This allows HTTPS site to connect to HTTP ESP32');
+                showAlert('⚠️ Connection blocked! Click the shield icon (🛡️) in address bar and allow unsafe scripts', 'warning');
+            }
+        } else {
+            // Only log first attempt to avoid spam
+            if (reconnectAttempts === 0) {
+                console.log('💡 ESP32 device not found - running in standalone mode');
+                console.log('To connect: Set ESP32 URL in Settings and click "Connect Device"');
+            }
         }
 
         scheduleReconnect();
@@ -1329,8 +1340,9 @@ async function saveSettings() {
             if (!esp32Url.startsWith('http://') && !esp32Url.startsWith('https://')) {
                 throw new Error('ESP32 URL must start with http:// or https://');
             }
-            esp32BaseUrl = esp32Url;
-            localStorage.setItem('esp32BaseUrl', esp32Url);
+            // Remove trailing slash to prevent double slashes
+            esp32BaseUrl = esp32Url.replace(/\/+$/, '');
+            localStorage.setItem('esp32BaseUrl', esp32BaseUrl);
 
             // Try to connect
             reconnectAttempts = 0; // Reset attempts
@@ -2934,8 +2946,9 @@ async function saveSettings() {
             if (!esp32Url.startsWith('http://') && !esp32Url.startsWith('https://')) {
                 throw new Error('ESP32 URL must start with http:// or https://');
             }
-            esp32BaseUrl = esp32Url;
-            localStorage.setItem('esp32BaseUrl', esp32Url);
+            // Remove trailing slash to prevent double slashes
+            esp32BaseUrl = esp32Url.replace(/\/+$/, '');
+            localStorage.setItem('esp32BaseUrl', esp32BaseUrl);
             reconnectAttempts = 0;
             await connectToESP32();
             initWebSocket();
