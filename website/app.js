@@ -3032,11 +3032,20 @@ function testAllLEDs() {
 function toggleLED(color) {
     showAlert(`Toggling ${color} LED...`, 'info');
     const ledElement = document.getElementById(`led${color.charAt(0).toUpperCase() + color.slice(1)}`);
+    const isOn = !ledElement.classList.contains('off');
     ledElement.classList.toggle('off');
 
-    // Simulate ESP32 API call
+    // Call ESP32 API
     if (esp32Enabled && esp32BaseUrl) {
-        esp32Request(`/api/led/${color}/toggle`, 'POST').catch(err => console.error(err));
+        esp32Request(`/api/test/led`, 'POST', {
+            color: color,
+            state: !isOn  // Toggle state
+        }).then(() => {
+            showAlert(`✓ ${color} LED ${!isOn ? 'ON' : 'OFF'}`, 'success');
+        }).catch(err => {
+            console.error(err);
+            showAlert(`✗ Failed to control ${color} LED`, 'error');
+        });
     }
 }
 
@@ -3047,7 +3056,20 @@ function cycleAllLEDs() {
 
 // Buzzer Testing Functions
 function testBuzzer() {
-    playTone('short');
+    showAlert(`🔊 Testing buzzer...`, 'info');
+
+    // Play tone using Web Audio API (browser sound)
+    playReminderSound();
+
+    // Call ESP32 API to test physical buzzer
+    if (esp32Enabled && esp32BaseUrl) {
+        esp32Request(`/api/test/buzzer`, 'POST', {}).then(() => {
+            showAlert('✓ Buzzer test complete', 'success');
+        }).catch(err => {
+            console.error(err);
+            showAlert('✗ Failed to test buzzer', 'error');
+        });
+    }
 }
 
 function playTone(type) {
@@ -3056,11 +3078,6 @@ function playTone(type) {
 
     // Play tone using Web Audio API
     playReminderSound();
-
-    // Simulate ESP32 API call
-    if (esp32Enabled && esp32BaseUrl) {
-        esp32Request(`/api/buzzer/play`, 'POST', { type, duration }).catch(err => console.error(err));
-    }
 }
 
 function stopBuzzer() {
