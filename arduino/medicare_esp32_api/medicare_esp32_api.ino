@@ -540,7 +540,8 @@ void handleUpdateMedication() {
   bool found = false;
 
   for (JsonObject med : meds) {
-    if (med["id"] == id) {
+    String medId = med["id"].as<String>();
+    if (medId == id) {
       DynamicJsonDocument updateDoc(1024);
       deserializeJson(updateDoc, body);
 
@@ -585,11 +586,12 @@ void handleDeleteMedication() {
 
   // Remove from array
   JsonArray meds = doc["medications"].as<JsonArray>();
-  JsonArray newMeds = doc.createNestedArray("medications");
+  JsonArray newMeds = doc.createNestedArray("medications_temp");
 
   bool found = false;
   for (JsonObject med : meds) {
-    if (med["id"] != id) {
+    String medId = med["id"].as<String>();
+    if (medId != id) {
       newMeds.add(med);
     } else {
       found = true;
@@ -599,6 +601,7 @@ void handleDeleteMedication() {
   if (found) {
     doc.remove("medications");
     doc["medications"] = newMeds;
+    doc.remove("medications_temp");
 
     // Save
     file = SPIFFS.open("/medications.json", "w");
