@@ -39,11 +39,11 @@
 // ====================================================================================
 
 // WiFi Credentials
-const char* ssid = "YOUR_WIFI_SSID";      // ← Change this
-const char* password = "YOUR_WIFI_PASSWORD"; // ← Change this
+const char* ssid = "ESP32SEG";           // Your WiFi network name
+const char* password = "letmeinplease";  // Your WiFi password
 
 // Google Gemini AI API Key
-const char* geminiApiKey = "YOUR_GEMINI_API_KEY"; // ← Change this
+const char* geminiApiKey = "AIzaSyDBzJeHlB5ayYe0iiM0bN9BtIn09Udnz6Y"; // ✅ Configured
 
 // Hardware Pin Definitions
 #define LED_RED   25
