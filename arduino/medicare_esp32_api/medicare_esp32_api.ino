@@ -275,38 +275,87 @@ void connectWiFi() {
 // LCD INITIALIZATION & DISPLAY
 // ====================================================================================
 
+// Helper function to print a line with proper padding
+void lcdPrintLine(int row, String text) {
+  lcd.setCursor(0, row);
+  lcd.print(text);
+  // Pad with spaces to clear any remaining characters
+  for (int i = text.length(); i < 20; i++) {
+    lcd.print(" ");
+  }
+}
+
 void initLCD() {
   Serial.println("[LCD] Initializing...");
 
+  // Initialize I2C
   Wire.begin(21, 22); // SDA=21, SCL=22
+  delay(100);
+
+  // Scan for I2C devices
+  Serial.println("[LCD] Scanning I2C bus...");
+  byte error, address;
+  int deviceCount = 0;
+
+  for(address = 1; address < 127; address++) {
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error == 0) {
+      Serial.print("[LCD] I2C device found at address 0x");
+      if (address < 16) Serial.print("0");
+      Serial.print(address, HEX);
+      Serial.println("!");
+      deviceCount++;
+    }
+  }
+
+  if (deviceCount == 0) {
+    Serial.println("[LCD] ✗ No I2C devices found! Check wiring:");
+    Serial.println("       SDA → GPIO 21");
+    Serial.println("       SCL → GPIO 22");
+    Serial.println("       VCC → 5V");
+    Serial.println("       GND → GND");
+  } else {
+    Serial.println("[LCD] I2C scan complete. Found " + String(deviceCount) + " device(s)");
+  }
+
+  // Initialize LCD
   lcd.init();
   lcd.backlight();
   lcd.clear();
+  delay(100);
 
-  // Boot message
-  lcd.setCursor(0, 0);
-  lcd.print("  MEDICARE ASSISTANT");
-  lcd.setCursor(0, 1);
-  lcd.print("  Booting ESP32...");
-  lcd.setCursor(0, 2);
-  lcd.print("  Please Wait...");
+  // Test: Fill screen with pattern to verify display
+  lcdPrintLine(0, "====================");
+  lcdPrintLine(1, "  MEDICARE ASSIST  ");
+  lcdPrintLine(2, "  Booting ESP32... ");
+  lcdPrintLine(3, "====================");
 
   delay(2000);
 
-  Serial.println("[LCD] ✓ Initialized");
+  Serial.println("[LCD] ✓ Initialized at address 0x" + String(LCD_ADDR, HEX));
+  Serial.println("[LCD] Display: 20x4 characters");
 }
 
 void displayIPAddress() {
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("MEDICARE ASSISTANT");
-  lcd.setCursor(0, 1);
-  lcd.print("====================");
-  lcd.setCursor(0, 2);
-  lcd.print("IP: ");
-  lcd.print(WiFi.localIP());
-  lcd.setCursor(0, 3);
-  lcd.print("Status: Ready");
+  delay(50);
+
+  // Line 1: Title
+  lcdPrintLine(0, "MEDICARE ASSISTANT");
+
+  // Line 2: Separator
+  lcdPrintLine(1, "====================");
+
+  // Line 3: IP Address
+  String ipStr = "IP: " + WiFi.localIP().toString();
+  lcdPrintLine(2, ipStr);
+
+  // Line 4: Status
+  lcdPrintLine(3, "Status: Ready");
+
+  Serial.println("[LCD] Displayed IP address: " + WiFi.localIP().toString());
 
   // Flash green LED to indicate ready
   for (int i = 0; i < 3; i++) {
@@ -452,10 +501,8 @@ void handleGetStatus() {
   Serial.println("[API] Client IP: " + server.client().remoteIP().toString());
 
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("API Request:");
-  lcd.setCursor(0, 1);
-  lcd.print("GET /status");
+  lcdPrintLine(0, "API Request:");
+  lcdPrintLine(1, "GET /status");
 
   StaticJsonDocument<512> doc;
   doc["success"] = true;
@@ -472,10 +519,8 @@ void handleGetStatus() {
   Serial.println("[API] Response: " + response);
   Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  lcd.setCursor(0, 2);
-  lcd.print("Status: SUCCESS     ");
-  lcd.setCursor(0, 3);
-  lcd.print("Sent " + String(response.length()) + " bytes    ");
+  lcdPrintLine(2, "Status: SUCCESS");
+  lcdPrintLine(3, "Sent " + String(response.length()) + "B");
 
   server.send(200, "application/json", response);
 
