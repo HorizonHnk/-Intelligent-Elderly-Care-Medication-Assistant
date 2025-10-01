@@ -441,7 +441,15 @@ void handleRoot() {
 }
 
 void handleGetStatus() {
+  Serial.println("\n[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   Serial.println("[API] GET /api/status");
+  Serial.println("[API] Client IP: " + server.client().remoteIP().toString());
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("API Request:");
+  lcd.setCursor(0, 1);
+  lcd.print("GET /status");
 
   StaticJsonDocument<512> doc;
   doc["success"] = true;
@@ -454,13 +462,36 @@ void handleGetStatus() {
   String response;
   serializeJson(doc, response);
 
+  Serial.println("[API] ✓ Response sent: " + String(response.length()) + " bytes");
+  Serial.println("[API] Response: " + response);
+  Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  lcd.setCursor(0, 2);
+  lcd.print("Status: SUCCESS");
+  lcd.setCursor(0, 3);
+  lcd.print("Sent " + String(response.length()) + " bytes");
+
   server.send(200, "application/json", response);
 }
 
 void handleGetMedications() {
+  Serial.println("\n[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   Serial.println("[API] GET /api/medications");
+  Serial.println("[API] Client IP: " + server.client().remoteIP().toString());
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("API Request:");
+  lcd.setCursor(0, 1);
+  lcd.print("GET /medications");
 
   if (!SPIFFS.exists("/medications.json")) {
+    Serial.println("[API] ✗ Error: File not found");
+    Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    lcd.setCursor(0, 2);
+    lcd.print("ERROR: No data file");
+
     server.send(404, "application/json", "{\"success\":false,\"error\":\"File not found\"}");
     return;
   }
@@ -469,19 +500,43 @@ void handleGetMedications() {
   String content = file.readString();
   file.close();
 
+  Serial.println("[API] ✓ File read: " + String(content.length()) + " bytes");
+  Serial.println("[API] ✓ Response sent");
+  Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  lcd.setCursor(0, 2);
+  lcd.print("Status: SUCCESS");
+  lcd.setCursor(0, 3);
+  lcd.print("Sent " + String(content.length()) + " bytes");
+
   server.send(200, "application/json", content);
 }
 
 void handleAddMedication() {
+  Serial.println("\n[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   Serial.println("[API] POST /api/medications");
+  Serial.println("[API] Client IP: " + server.client().remoteIP().toString());
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("API Request:");
+  lcd.setCursor(0, 1);
+  lcd.print("ADD Medication");
 
   if (!server.hasArg("plain")) {
+    Serial.println("[API] ✗ Error: No body received");
+    Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    lcd.setCursor(0, 2);
+    lcd.print("ERROR: No data");
+
     server.send(400, "application/json", "{\"success\":false,\"error\":\"No body\"}");
     return;
   }
 
   String body = server.arg("plain");
-  Serial.println("[API] Body: " + body);
+  Serial.println("[API] Received body: " + String(body.length()) + " bytes");
+  Serial.println("[API] Data: " + body);
 
   // Parse existing medications
   File file = SPIFFS.open("/medications.json", "r");
@@ -493,21 +548,45 @@ void handleAddMedication() {
 
   // Parse new medication
   DynamicJsonDocument newMed(1024);
-  deserializeJson(newMed, body);
+  DeserializationError error = deserializeJson(newMed, body);
+
+  if (error) {
+    Serial.println("[API] ✗ Error: Failed to parse JSON - " + String(error.c_str()));
+    Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    lcd.setCursor(0, 2);
+    lcd.print("ERROR: Bad JSON");
+
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+    return;
+  }
 
   // Add to array
   JsonArray meds = doc["medications"].as<JsonArray>();
   meds.add(newMed.as<JsonObject>());
+
+  Serial.println("[API] ✓ Medication added to array");
 
   // Save back
   file = SPIFFS.open("/medications.json", "w");
   serializeJson(doc, file);
   file.close();
 
+  Serial.println("[API] ✓ Data saved to SPIFFS");
+  Serial.println("[API] ✓ Response sent: SUCCESS");
+  Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  lcd.setCursor(0, 2);
+  lcd.print("Status: SUCCESS");
+  lcd.setCursor(0, 3);
+  lcd.print("Med added!");
+
   server.send(200, "application/json", "{\"success\":true}");
 
   // Broadcast update via WebSocket
+  Serial.println("[WS] Broadcasting update to clients...");
   broadcastWebSocket("{\"type\":\"medication_added\"}");
+  Serial.println("[WS] ✓ Broadcast sent\n");
 }
 
 void handleUpdateMedication() {
@@ -786,30 +865,81 @@ String callGeminiAI(String imageBase64) {
 void wsEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   switch (type) {
     case WStype_DISCONNECTED:
-      Serial.printf("[WS] Client #%u disconnected\n", num);
+      Serial.println("\n[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      Serial.printf("[WS] ✗ Client #%u DISCONNECTED\n", num);
       if (wsClientCount > 0) wsClientCount--;
+      Serial.println("[WS] Active clients: " + String(wsClientCount));
+      Serial.println("[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("WebSocket Event:");
+      lcd.setCursor(0, 1);
+      lcd.print("Client Disconnected");
+      lcd.setCursor(0, 2);
+      lcd.print("Active: " + String(wsClientCount));
       break;
 
     case WStype_CONNECTED: {
       IPAddress ip = ws.remoteIP(num);
-      Serial.printf("[WS] Client #%u connected from %d.%d.%d.%d\n", num, ip[0], ip[1], ip[2], ip[3]);
+      Serial.println("\n[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      Serial.printf("[WS] ✓ Client #%u CONNECTED\n", num);
+      Serial.printf("[WS] IP: %d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
       wsClientCount++;
+      Serial.println("[WS] Active clients: " + String(wsClientCount));
+      Serial.println("[WS] Sending welcome message...");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("WebSocket Event:");
+      lcd.setCursor(0, 1);
+      lcd.print("Client Connected!");
+      lcd.setCursor(0, 2);
+      lcd.print("IP: " + String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]));
+      lcd.setCursor(0, 3);
+      lcd.print("Active: " + String(wsClientCount));
 
       // Send welcome message
       ws.sendTXT(num, "{\"type\":\"welcome\",\"message\":\"Connected to ESP32\"}");
+      Serial.println("[WS] ✓ Welcome message sent");
+      Serial.println("[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
       break;
     }
 
     case WStype_TEXT:
-      Serial.printf("[WS] Received from #%u: %s\n", num, payload);
+      Serial.println("\n[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      Serial.printf("[WS] Received message from Client #%u\n", num);
+      Serial.printf("[WS] Length: %u bytes\n", length);
+      Serial.printf("[WS] Data: %s\n", payload);
+      Serial.println("[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("WS: Message RX");
+      lcd.setCursor(0, 1);
+      lcd.print("From Client #" + String(num));
+      lcd.setCursor(0, 2);
+      lcd.print(String(length) + " bytes");
+
       // Handle incoming messages if needed
       break;
   }
 }
 
 void broadcastWebSocket(String message) {
+  Serial.println("\n[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  Serial.println("[WS] Broadcasting to " + String(wsClientCount) + " client(s)");
+  Serial.println("[WS] Message: " + message);
+
   ws.broadcastTXT(message);
-  Serial.println("[WS] Broadcast: " + message);
+
+  Serial.println("[WS] ✓ Broadcast complete");
+  Serial.println("[WS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  lcd.setCursor(0, 2);
+  lcd.print("WS: Broadcast OK");
+  lcd.setCursor(0, 3);
+  lcd.print(String(wsClientCount) + " client(s)");
 }
 
 // ====================================================================================
