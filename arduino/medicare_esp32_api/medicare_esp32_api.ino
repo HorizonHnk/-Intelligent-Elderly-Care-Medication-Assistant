@@ -396,6 +396,12 @@ void setupAPIRoutes() {
   server.on("/api/scan-document", HTTP_POST, handleScanDocument);
   server.on("/api/scan-document", HTTP_OPTIONS, handleCORS);
 
+  // Hardware Testing Endpoints
+  server.on("/api/test/led", HTTP_POST, handleTestLED);
+  server.on("/api/test/led", HTTP_OPTIONS, handleCORS);
+  server.on("/api/test/buzzer", HTTP_POST, handleTestBuzzer);
+  server.on("/api/test/buzzer", HTTP_OPTIONS, handleCORS);
+
   // 404 handler
   server.onNotFound(handleNotFound);
 
@@ -467,11 +473,13 @@ void handleGetStatus() {
   Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   lcd.setCursor(0, 2);
-  lcd.print("Status: SUCCESS");
+  lcd.print("Status: SUCCESS     ");
   lcd.setCursor(0, 3);
-  lcd.print("Sent " + String(response.length()) + " bytes");
+  lcd.print("Sent " + String(response.length()) + " bytes    ");
 
   server.send(200, "application/json", response);
+
+  delay(1500); // Keep display for 1.5 seconds
 }
 
 void handleGetMedications() {
@@ -505,11 +513,13 @@ void handleGetMedications() {
   Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   lcd.setCursor(0, 2);
-  lcd.print("Status: SUCCESS");
+  lcd.print("Status: SUCCESS     ");
   lcd.setCursor(0, 3);
-  lcd.print("Sent " + String(content.length()) + " bytes");
+  lcd.print("Sent " + String(content.length()) + " bytes    ");
 
   server.send(200, "application/json", content);
+
+  delay(1500); // Keep display for 1.5 seconds
 }
 
 void handleAddMedication() {
@@ -577,11 +587,13 @@ void handleAddMedication() {
   Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   lcd.setCursor(0, 2);
-  lcd.print("Status: SUCCESS");
+  lcd.print("Status: SUCCESS     ");
   lcd.setCursor(0, 3);
-  lcd.print("Med added!");
+  lcd.print("Med added!          ");
 
   server.send(200, "application/json", "{\"success\":true}");
+
+  delay(1500); // Keep display for 1.5 seconds
 
   // Broadcast update via WebSocket
   Serial.println("[WS] Broadcasting update to clients...");
@@ -856,6 +868,117 @@ String callGeminiAI(String imageBase64) {
 
   http.end();
   return response;
+}
+
+// ====================================================================================
+// HARDWARE TESTING HANDLERS
+// ====================================================================================
+
+void handleTestLED() {
+  Serial.println("\n[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  Serial.println("[API] POST /api/test/led");
+  Serial.println("[API] Client IP: " + server.client().remoteIP().toString());
+
+  if (!server.hasArg("plain")) {
+    Serial.println("[API] ✗ Error: No body received");
+    Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"No body\"}");
+    return;
+  }
+
+  String body = server.arg("plain");
+  Serial.println("[API] Body: " + body);
+
+  DynamicJsonDocument doc(256);
+  DeserializationError error = deserializeJson(doc, body);
+
+  if (error) {
+    Serial.println("[API] ✗ Error: Invalid JSON");
+    Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+    return;
+  }
+
+  String color = doc["color"].as<String>();
+  bool state = doc["state"] | false;
+
+  Serial.println("[API] LED Color: " + color);
+  Serial.println("[API] LED State: " + String(state ? "ON" : "OFF"));
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Hardware Test:");
+  lcd.setCursor(0, 1);
+  lcd.print("LED " + color);
+  lcd.setCursor(0, 2);
+  lcd.print("State: " + String(state ? "ON" : "OFF"));
+
+  // Control LED
+  if (color == "red") {
+    digitalWrite(LED_RED, state ? HIGH : LOW);
+    Serial.println("[HW] ✓ Red LED " + String(state ? "ON" : "OFF"));
+  } else if (color == "green") {
+    digitalWrite(LED_GREEN, state ? HIGH : LOW);
+    Serial.println("[HW] ✓ Green LED " + String(state ? "ON" : "OFF"));
+  } else if (color == "blue") {
+    digitalWrite(LED_BLUE, state ? HIGH : LOW);
+    Serial.println("[HW] ✓ Blue LED " + String(state ? "ON" : "OFF"));
+  } else {
+    Serial.println("[API] ✗ Error: Unknown color: " + color);
+    Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    lcd.setCursor(0, 3);
+    lcd.print("ERROR: Bad color");
+
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"Unknown color\"}");
+    return;
+  }
+
+  Serial.println("[API] ✓ Response sent: SUCCESS");
+  Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  lcd.setCursor(0, 3);
+  lcd.print("Status: SUCCESS");
+
+  server.send(200, "application/json", "{\"success\":true}");
+
+  // Keep display for 2 seconds so it's readable
+  delay(2000);
+}
+
+void handleTestBuzzer() {
+  Serial.println("\n[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  Serial.println("[API] POST /api/test/buzzer");
+  Serial.println("[API] Client IP: " + server.client().remoteIP().toString());
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Hardware Test:");
+  lcd.setCursor(0, 1);
+  lcd.print("BUZZER");
+  lcd.setCursor(0, 2);
+  lcd.print("Testing...");
+
+  Serial.println("[HW] ✓ Buzzer testing...");
+
+  // Activate buzzer for 500ms
+  digitalWrite(BUZZER, HIGH);
+  delay(500);
+  digitalWrite(BUZZER, LOW);
+
+  Serial.println("[HW] ✓ Buzzer test complete");
+  Serial.println("[API] ✓ Response sent: SUCCESS");
+  Serial.println("[API] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+  lcd.setCursor(0, 2);
+  lcd.print("Status: SUCCESS ");
+  lcd.setCursor(0, 3);
+  lcd.print("Buzzer tested OK");
+
+  server.send(200, "application/json", "{\"success\":true}");
+
+  // Keep display for 2 seconds so it's readable
+  delay(2000);
 }
 
 // ====================================================================================
